@@ -8,10 +8,10 @@ students = [
 ]
 
 courses = [
-    {"course_id": "C201", "title": "Software Architecture", "instructor": "Dr. Alice Chen", "credits": 4},
-    {"course_id": "C202", "title": "Thermodynamics",        "instructor": "Prof. John Miller", "credits": 3},
-    {"course_id": "C203", "title": "AI Systems",            "instructor": "Dr. Nina Singh", "credits": 4},
-    {"course_id": "C204", "title": "Circuit Analysis",      "instructor": "Dr. Ravi Patel", "credits": 3},
+    {"course_id": "C201", "title": "Software Architecture", "instructor": "Dr. Alice Chen", "credits": 4, "room":"0"},
+    {"course_id": "C202", "title": "Thermodynamics",        "instructor": "Prof. John Miller", "credits": 3, "room":"0"},
+    {"course_id": "C203", "title": "AI Systems",            "instructor": "Dr. Nina Singh", "credits": 4, "room":"0"},
+    {"course_id": "C204", "title": "Circuit Analysis",      "instructor": "Dr. Ravi Patel", "credits": 3, "room":"0"},
 ]
 
 rooms = [
@@ -68,16 +68,50 @@ def get_room_by_id(room_id):
     room=db.read_rooms.find_one({"room_id": room_id})
     return room
 
-def room_reserve(room_id):
-    room = db.read_rooms.find_one({"room_id": room_id})
+def room_reserve(room_id,course_id):
+    room = db.rooms.find_one({"room_id": room_id})
     if room is None:
         return False
+    course=db.courses.find_one({"course_id": course_id})
+    if course is None:
+        return False
+
     if room["isReserved"]==1:
         return False
-    room["isReserved"]=0
+    room["isReserved"]=1
+    course["room"]=room["room_id"]
     db.rooms.update_one(
         {"room_id": room_id},
         {"$set": room},
+        upsert=True,
+    )
+    db.course.update_one(
+        {"course_id": course_id},
+        {"$set": course},
+        upsert=True,
+    )
+    return True
+
+def cancel_room_reserve(room_id,course_id):
+    room = db.rooms.find_one({"room_id": room_id})
+    if room is None:
+        return False
+    course = db.courses.find_one({"course_id": course_id})
+    if course is None:
+        return False
+
+    if room["isReserved"] == 0:
+        return False
+    room["isReserved"] = 0
+    course["room"]="0"
+    db.rooms.update_one(
+        {"room_id": room_id},
+        {"$set": room},
+        upsert=True,
+    )
+    db.course.update_one(
+        {"course_id": course_id},
+        {"$set": course},
         upsert=True,
     )
     return True
